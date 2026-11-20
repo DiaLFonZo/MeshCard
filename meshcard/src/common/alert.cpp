@@ -10,6 +10,8 @@
 
 #if !defined(MESHCARD_ESP32)
 #include <sys/wait.h>
+#else
+#include <Arduino.h>
 #endif
 #include <sys/stat.h>
 #include <unistd.h>
@@ -112,6 +114,27 @@ std::string alert_conf_path()
     return std::string(home && *home ? home : "/home/pi") + "/.config/meshcard/alert.conf";
 }
 
+std::string alert_open_chat_path()
+{
+    return "/tmp/meshcard-open-chat";
+}
+
+bool alert_chat_is_open(bool dm, uint32_t id)
+{
+    FILE* f = fopen(alert_open_chat_path().c_str(), "r");
+    if (!f) return false;
+    int pid = 0, fdm = 0;
+    unsigned fid = 0;
+    const bool got = fscanf(f, "%d %d %u", &pid, &fdm, &fid) == 3;
+    fclose(f);
+    if (!got || pid <= 0) return false;
+    char proc[32];
+    snprintf(proc, sizeof(proc), "/proc/%d", pid);
+    struct stat st{};
+    if (stat(proc, &st) != 0) return false;  // the app has closed
+    return (fdm != 0) == dm && fid == id;
+}
+
 AlertConf alert_conf_load()
 {
     AlertConf c;
@@ -154,6 +177,49 @@ void alert_ring(const AlertConf& c)
     (void)&write_wav;
     (void)&make_sound;
     mc_platform_ring(c.sound, c.volume);
+}
+
+// Same timing as meshcard-alertd's Alarm (meshcard/src/alert/main.cpp).
+namespace {
+constexpr uint32_t kRingEveryMs = 5000;
+constexpr uint32_t kGiveUpMs    = 3 * 60 * 1000;
+struct EspAlarm {
+    bool active      = false;
+    uint32_t started = 0;
+    uint32_t next    = 0;
+    AlertConf conf;
+} g_alarm;
+}  // namespace
+
+void alert_message(bool dm)
+{
+    const AlertConf c = alert_conf_load();
+    if (!c.on || !(dm || c.all)) return;
+    const uint32_t t = millis();
+    if (!g_alarm.active) g_alarm.started = t;
+    g_alarm.active = true;
+    g_alarm.conf   = c;
+    g_alarm.next   = t;  // ring now, also for a second message during a ring
+}
+
+void alert_key()
+{
+    g_alarm.active = false;
+}
+
+void alert_tick()
+{
+    if (!g_alarm.active) return;
+    const uint32_t t = millis();
+    if (t - g_alarm.started > kGiveUpMs) {
+        g_alarm.active = false;
+        return;
+    }
+    if (static_cast<int32_t>(t - g_alarm.next) >= 0) {
+        alert_ring(g_alarm.conf);
+        g_alarm.next = t + kRingEveryMs;
+        if (!g_alarm.conf.repeat) g_alarm.active = false;
+    }
 }
 #else
 void alert_ring(const AlertConf& c)

@@ -927,6 +927,11 @@ void AdminModule::handleSetConfig(const meshtastic_Config &c, bool fromOthers)
             requiresReboot = false;
         }
         config.device = c.payload_variant.device;
+        // A new time zone takes effect now, not only at the next boot (main.cpp sets TZ only at startup)
+        if (*config.device.tzdef) {
+            setenv("TZ", config.device.tzdef, 1);
+            tzset();
+        }
         if (config.device.rebroadcast_mode == meshtastic_Config_DeviceConfig_RebroadcastMode_NONE &&
             (config.device.role == meshtastic_Config_DeviceConfig_Role_ROUTER ||
              config.device.role == meshtastic_Config_DeviceConfig_Role_ROUTER_LATE)) {

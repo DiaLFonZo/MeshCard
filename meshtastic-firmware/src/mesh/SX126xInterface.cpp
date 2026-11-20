@@ -138,12 +138,10 @@ template <typename T> bool SX126xInterface<T>::reinitChip()
         power = -9;
 
     // FIXME: May want to set depending on a definition, currently all SX126x variant files use the DC-DC regulator option
-#if defined(U115_RADIO)
-    // Ra-07H / ASR6501: Heltec's CubeCell code never enables the DC-DC, the radio runs on its LDO.
-    bool useRegulatorLDO = true;
-#else
+    // U115 (Ra-07H / ASR6501): DC-DC like everyone else. CubeCell's RadioInit() sets USE_DCDC
+    // (LoraWan102/src/radio/radio.c); the earlier LDO choice here was based on a wrong reading of that
+    // code, and U115 long sends arrived damaged (2026-11-20).
     bool useRegulatorLDO = false; // Seems to depend on the connection to pin 9/DCC_SW - if an inductor DCDC?
-#endif
 
     int res = lora.begin(getFreq(), bw, sf, cr, syncWord, power, preambleLength, tcxoVoltage, useRegulatorLDO);
     // RadioLib >= 7.5.0 retries on the XTAL inside begin() when the TCXO will not start, and zeroes its own Vref;
@@ -313,6 +311,7 @@ template <typename T> int16_t SX126xInterface<T>::programModemParams()
         LOG_ERROR("SX126X setPreambleLength(%u) %s%d", preambleLength, radioLibErr, err);
         return err;
     }
+    programmedPreamble = preambleLength;
 
     err = lora.setFrequency(getFreq());
     if (err != RADIOLIB_ERR_NONE) {
@@ -442,7 +441,11 @@ template <typename T> void SX126xInterface<T>::handleSoftwareLoraIrqPoll()
         return; // startReceive() restarts this poll
     }
     static uint32_t lastFullPoll = 0;
-    if (!(u115Hal && u115Hal->takeIrq()) && millis() - lastFullPoll < 20) {
+    // While sending, the cable stays quiet (as the Zero host does): the bridge reports DIO1 = TX_DONE itself, so the
+    // full read is only a 1 s fallback (2026-11-20: ADV long sends still failed with the warm-up preamble while the
+    // Zero's passed; the 20 ms status reads during the send are the one host-side difference).
+    const uint32_t fullPollMs = pollTxMode ? 1000 : 20;
+    if (!(u115Hal && u115Hal->takeIrq()) && millis() - lastFullPoll < fullPollMs) {
         scheduleIrqPollTick();
         return;
     }
@@ -636,8 +639,68 @@ template <typename T> int16_t SX126xInterface<T>::startRxCommand()
                       wideLoraPreambleLengthDefault <= 2 * rxDutyCycleMinSymbols,
                   "a preamble longer than the duty cycle's wake window would really sleep, so this arm would no longer "
                   "be the continuous RX rxArmedContinuous claims");
+    setLoraPreamble(preambleLength); // back to the normal preamble after a U115 long send (one command, only then)
     return lora.startReceive(RADIOLIB_SX126X_RX_TIMEOUT_INF, MESHTASTIC_RADIOLIB_IRQ_RX_FLAGS);
 }
+
+// U115 warm-up preamble, see SX126xInterface.h. A data part longer than this gets the long preamble...
+// Measured 2026-11-20 on the weaker unit, normal preamble: 59 B (a short direct message: 43 B encrypted + header,
+// 0.71 s) all received; 75 B (0.82 s) 1 of 4; 90 B none. So only frames up to 60 B (0.68 s computed) go out with no
+// warm-up - the sizes measured good; 61 B and up get it.
+#define U115_WARM_TX_MS 700
+// ...and the preamble then lasts this long. Units differ (normal factory spread of the crystal): measured
+// 2026-11-20 at LongFast, 144 B, Heltec receiving - one unit good from 1.3 s; the other 0/4 at 1.3 s and 3 s,
+// 3/7 at 4 s, 7/7 at 5 s (237 B 6/7). 6 s keeps a margin over the worse one.
+#define U115_WARMUP_MS 6000
+
+template <typename T> uint16_t SX126xInterface<T>::txPreambleFor(size_t numbytes)
+{
+#ifdef U115_RADIO
+    if (computePacketTime(lora, numbytes, false) <= U115_WARM_TX_MS)
+        return preambleLength;
+    const float symbolMs = (float)(1u << sf) / bw; // bw is in kHz
+    uint32_t symbols = (uint32_t)(U115_WARMUP_MS / symbolMs) + 1;
+    if (symbols < preambleLength)
+        symbols = preambleLength;
+    if (symbols > 0xFFFF)
+        symbols = 0xFFFF;
+    return (uint16_t)symbols;
+#else
+    (void)numbytes;
+    return preambleLength;
+#endif
+}
+
+template <typename T> uint32_t SX126xInterface<T>::txPreambleExtraMs(uint32_t pl)
+{
+    const uint16_t pre = txPreambleFor(pl);
+    if (pre <= preambleLength)
+        return 0;
+    return (uint32_t)((pre - preambleLength) * (float)(1u << sf) / bw);
+}
+
+template <typename T> void SX126xInterface<T>::setLoraPreamble(uint16_t symbols)
+{
+    if (symbols == programmedPreamble)
+        return;
+    const int16_t err = lora.setPreambleLength(symbols);
+    if (err != RADIOLIB_ERR_NONE) {
+        LOG_ERROR("SX126X setPreambleLength(%u) %s%d", symbols, radioLibErr, err);
+        return;
+    }
+    programmedPreamble = symbols;
+}
+
+#ifndef ARCH_PORTDUINO
+template <typename T> int16_t SX126xInterface<T>::launchTransmit(size_t numbytes)
+{
+    const uint16_t pre = txPreambleFor(numbytes);
+    if (pre != preambleLength)
+        LOG_DEBUG("U115: %u B send, warm-up preamble %u symbols", (unsigned)numbytes, pre);
+    setLoraPreamble(pre);
+    return RadioLibInterface::launchTransmit(numbytes);
+}
+#endif
 
 #ifdef MESHTASTIC_RX_READOUT_TASK
 template <typename T> bool INTERRUPT_ATTR SX126xInterface<T>::rearmReceiveFromIsr()
@@ -825,7 +888,11 @@ template <typename T> int16_t SX126xInterface<T>::launchTransmit(size_t numbytes
     prestagedLen = 0;
     prestagedInRx = false;
     earlyStagedLen = 0; // this TX takes the buffer, prestaged or not
+    const uint16_t pre = txPreambleFor(numbytes);
+    if (pre != preambleLength)
+        LOG_DEBUG("U115: %u B send, warm-up preamble %u symbols", (unsigned)numbytes, pre);
     if (!prestaged) {
+        setLoraPreamble(pre);
         const int16_t res = RadioLibInterface::launchTransmit(numbytes);
         if (res == RADIOLIB_ERR_NONE)
             txStagedByRadioLib = true;
@@ -834,7 +901,7 @@ template <typename T> int16_t SX126xInterface<T>::launchTransmit(size_t numbytes
     // What RadioLib's TX staging would send, less the buffer (already written), the buffer base (RadioLib only ever
     // uses 0/0), the register fixes (an earlier staging set them, and the chip keeps them until it loses its
     // registers) and the packet-type read. Packet params are the ones programModemParams() gives RadioLib.
-    const uint8_t packetParams[] = {(uint8_t)(preambleLength >> 8),       (uint8_t)(preambleLength & 0xFF),
+    const uint8_t packetParams[] = {(uint8_t)(pre >> 8),                  (uint8_t)(pre & 0xFF),
                                     RADIOLIB_SX126X_LORA_HEADER_EXPLICIT, (uint8_t)numbytes,
                                     RADIOLIB_SX126X_LORA_CRC_ON,          RADIOLIB_SX126X_LORA_IQ_STANDARD};
     const uint16_t irqMask = RADIOLIB_SX126X_IRQ_TX_DONE | RADIOLIB_SX126X_IRQ_TIMEOUT;

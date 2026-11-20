@@ -138,6 +138,14 @@ void INTERRUPT_ATTR RadioLibInterface::isrTxLevel0()
  */
 RadioLibInterface *RadioLibInterface::instance;
 
+#if defined(PINEDIO_U115) || defined(U115_BRIDGE_ESP32)
+/** U115: when the pre-send channel check first said "busy" with no frame heard since, or 0. The U115's check
+ * says busy with nobody on air (Zero: 36 of 40 checks, 2026-11-20), which held sends for minutes. A real
+ * sender's frame is heard within one max frame of its preamble, so past that the "busy" is not believed.
+ * File-level (one radio per device) so the shared header, and every file that includes it, stays unchanged. */
+static uint32_t u115CadBusySince = 0;
+#endif
+
 /** At most one busyRx deferral line per this interval; the line carries the count it stands for. */
 #define BUSY_RX_LOG_INTERVAL_MS 30000
 
@@ -167,12 +175,19 @@ bool RadioLibInterface::canSendImmediately()
         if (busyTx && !Throttle::isWithinTimespanMs(lastTxStart, 15000)) {
             LOG_WARN("U115: send not finished after 15 s, resetting the radio");
             lastTxStart = Time::getMillis(); // one recovery per 15 s
+            // Release the packet right here, as the ISR_TX case does. Not notify(ISR_TX): the caller's
+            // setTransmitDelay() overwrites that one notification, so the packet was never released
+            // and the radio stayed "busy" for good (no texts out, 2026-11-20).
+            meshtastic_MeshPacket *sent;
             {
                 RadioSequence seq(this);
                 if (!recoverChipStateLoss()) // full set-up again, in case the chip lost its settings
                     LOG_ERROR("U115: radio set-up failed, will try again");
+                sent = handleTransmitInterrupt();
+                if (!adoptReceiveArmedFromIsr())
+                    startReceive();
             }
-            notify(ISR_TX, true); // the normal end-of-send path: release the packet, listen again
+            finishSentPacket(sent);
             return false;
         }
 #endif
@@ -692,8 +707,27 @@ void RadioLibInterface::onNotify(uint32_t notification)
                     // Listen-before-talk: a CAD preamble scan immediately before we key up.
                     LOG_DEBUG_RADIO("CAD arm");
                     scanForTx = txp;
-                    const bool channelActive = isChannelActive();
+                    bool channelActive = isChannelActive();
                     scanForTx = nullptr;
+#if defined(PINEDIO_U115) || defined(U115_BRIDGE_ESP32)
+                    if (channelActive) {
+                        const uint32_t busyNow = Time::getMillis();
+                        if (!u115CadBusySince) {
+                            u115CadBusySince = Time::skipZero(busyNow);
+                        } else if (Throttle::hasElapsed(u115CadBusySince, 1000)) {
+                            // A real sender's header is in by ~0.3 s at LongFast, so a "busy" with no frame for 1 s
+                            // is false (measured 2026-11-20: the wait was 3.4-4.3 s per message). Send. A clear check leaves
+                            // the chip in standby for the send; this one left it in RX, so stand it by first.
+                            LOG_WARN("U115: channel check said busy for %u ms with no frame heard, sending",
+                                     (unsigned)(busyNow - u115CadBusySince));
+                            cadHandedToRx = false; // the handoff is dropped on purpose, not lost
+                            setStandby();
+                            channelActive = false;
+                        }
+                    }
+                    if (!channelActive)
+                        u115CadBusySince = 0;
+#endif
                     if (channelActive) { // currently traffic on the channel?
                         LOG_DEBUG_RADIO("CAD busy");
                         // Beacon target or not: reconfigureForBeaconTX() already left RX running on that
@@ -935,6 +969,9 @@ void RadioLibInterface::handleReceiveInterrupt(const CapturedRxInfo *captured)
 
     if (wasCadHandoff)
         LOG_DEBUG_RADIO("CAD>RX pkt");
+#if defined(PINEDIO_U115) || defined(U115_BRIDGE_ESP32)
+    u115CadBusySince = 0; // a real frame: the channel checks are believed again
+#endif
 
     // Some drivers report this as a 16 bit value, so a bad readback can overrun radioBuffer in readData()
     if (length > sizeof(radioBuffer)) {

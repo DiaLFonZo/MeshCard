@@ -86,7 +86,10 @@ template <class T> class SX126xInterface : public RadioLibInterface
 
     virtual void setStandby() override;
 
-    uint32_t getPacketTime(uint32_t pl, bool received) override { return computePacketTime(lora, pl, received); }
+    uint32_t getPacketTime(uint32_t pl, bool received) override
+    {
+        return computePacketTime(lora, pl, received) + (received ? 0 : txPreambleExtraMs(pl));
+    }
 
     bool readRxHeaderInfo(uint8_t &cr, bool &hasCRC) override
     {
@@ -96,12 +99,23 @@ template <class T> class SX126xInterface : public RadioLibInterface
     // Sub-GHz only. isChannelActive() passes CAD_ON_4_SYMB; keep the two in step.
     uint8_t getCadSymbolCountSubGhz() const override { return 4; }
 
-#ifdef ARCH_PORTDUINO
-    /** On a CH341 host: launch a payload the scan staged, sending only what the scan overwrote */
+    /** Sets the warm-up preamble a U115 long send needs (see txPreambleFor), then launches the TX; on a CH341 host it
+     * launches a payload the scan staged, sending only what the scan overwrote */
     int16_t launchTransmit(size_t numbytes) override;
-#endif
 
   private:
+    /** U115 (crystal radio, no TCXO): the chip's frequency moves while it warms up during the first ~1 s of a 22 dBm
+     * send, and receivers lose a long frame's tail (every receiver, CRC error; measured 2026-11-20 with
+     * tools/u115_tx_test.py: 30 B 5/5, 60 B 3/4, 90-237 B 0/23 with the normal 16-symbol preamble; 144 B 4/4 and
+     * 237 B 4/4 once the preamble lasts ~1.3 s, or when the chip is already warm from a send just before). So a
+     * frame whose data part is long gets a preamble long enough to warm the chip before the header: receivers lock
+     * on the last preamble symbols and follow any preamble length. Other radios: the normal preamble. */
+    uint16_t txPreambleFor(size_t numbytes);
+    /** The extra air time, in ms, txPreambleFor() adds to a frame of pl bytes (0 on other radios) */
+    uint32_t txPreambleExtraMs(uint32_t pl);
+    /** Program RadioLib's TX preamble only when it changes (each command is a serial round trip on the U115) */
+    void setLoraPreamble(uint16_t symbols);
+    uint16_t programmedPreamble = 0;
 #ifdef LORA_DIO1_SOFTWARE_POLL
     bool irqPollingActive = false;
     bool pollTxMode = false;

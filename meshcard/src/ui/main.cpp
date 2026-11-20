@@ -61,10 +61,17 @@ public:
     static constexpr uint64_t kOffMs = 60000;
     static constexpr int kFull = 100, kDim = 15, kOff = 0;
 
-    void enable()
+    static std::string light_path()
     {
         const char* env = getenv("MESHZERO_BACKLIGHT");
-        path_ = env && env[0] ? env : "/sys/class/backlight/backlight/brightness";
+        return env && env[0] ? env : "/sys/class/backlight/backlight/brightness";
+    }
+    // A screen light we may write (the Zero's; none on a PC).
+    static bool available() { return access(light_path().c_str(), W_OK) == 0; }
+
+    void enable()
+    {
+        path_ = light_path();
         on_   = true;
         set(kFull);
         last_ = now_ms();
@@ -113,7 +120,19 @@ public:
             forced_off_  = false;
         }
         if (forced_off_) return set(kOff);
-        if (plugged) return set(kFull);
+        if (plugged) {
+            // The Zero's launcher keeps running behind us and turns the light off on its own
+            // timer; level_ would still say "full". Check the real value every second.
+            if (now - checked_ms_ >= 1000) {
+                checked_ms_ = now;
+                if (FILE* f = fopen(path_.c_str(), "r")) {
+                    int real = -1;
+                    if (fscanf(f, "%d", &real) == 1 && real == 0) level_ = -1;  // forces the write below
+                    fclose(f);
+                }
+            }
+            return set(kFull);
+        }
         const uint64_t idle = now - last_;
         set(idle >= kOffMs ? kOff : idle >= kDimMs ? kDim : kFull);
     }
@@ -132,7 +151,7 @@ private:
     std::string path_;
     bool on_ = false, eating_ = false, forced_off_ = false, was_plugged_ = false;
     int level_ = -1;
-    uint64_t last_ = 0, eat_until_ = 0;
+    uint64_t last_ = 0, eat_until_ = 0, checked_ms_ = 0;
     uint32_t seen_wake_ = 0;
 };
 
@@ -307,7 +326,10 @@ int main(int argc, char** argv)
             Keypad keypad;
             const bool device_keys = display_kind() == DisplayKind::Fbdev;
             if (device_keys && !keypad.open_default()) fprintf(stderr, "meshzero: no keyboard found\n");
-            if (device_keys) g_light.enable();
+            // The screen light is ours whenever the device has one, also when MeshCard runs in
+            // the Zero's desktop (not fbdev): before, it was left to the launcher there, which
+            // turned it off while plugged in (2026-11-20).
+            if (device_keys || g_light.available()) g_light.enable();
             while (pump(app, mesh, device_keys ? &keypad : nullptr, 1000)) {
             }
         }

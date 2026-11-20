@@ -10,6 +10,7 @@
 #include <string>
 
 #include <arpa/inet.h>
+#include <dirent.h>
 #include <fcntl.h>
 #include <linux/input.h>
 #include <netinet/in.h>
@@ -118,6 +119,88 @@ struct Alarm {
     }
 };
 
+// Plugged in: the screen stays on, also with MeshCard closed (the Zero's launcher would turn
+// it off on its own timer). MeshCard open does this itself, and Esc there can turn it off,
+// so nothing is done while it runs. On battery the launcher decides, as before.
+struct KeepLit {
+    uint64_t next = 0;
+    int on_level  = -1;  // the last level seen lit, put back as it was
+
+    static bool read_int(const std::string& path, int& v)
+    {
+        FILE* f = fopen(path.c_str(), "r");
+        if (!f) return false;
+        const bool ok = fscanf(f, "%d", &v) == 1;
+        fclose(f);
+        return ok;
+    }
+
+    static std::string read_word(const std::string& path)
+    {
+        char buf[32] = "";
+        FILE* f = fopen(path.c_str(), "r");
+        if (!f) return "";
+        if (!fgets(buf, sizeof(buf), f)) buf[0] = 0;
+        fclose(f);
+        std::string s(buf);
+        while (!s.empty() && (s.back() == '\n' || s.back() == ' ')) s.pop_back();
+        return s;
+    }
+
+    static bool plugged()
+    {
+        DIR* d = opendir("/sys/class/power_supply");
+        if (!d) return false;
+        bool yes = false;
+        while (dirent* e = readdir(d)) {
+            if (e->d_name[0] == '.') continue;
+            const std::string dir = std::string("/sys/class/power_supply/") + e->d_name;
+            if (read_word(dir + "/type") != "Battery") continue;
+            const std::string s = read_word(dir + "/status");
+            yes = s == "Charging" || s == "Full" || s == "Not charging";  // same rule as MeshCard
+            break;
+        }
+        closedir(d);
+        return yes;
+    }
+
+    static bool meshcard_running()
+    {
+        DIR* d = opendir("/proc");
+        if (!d) return false;
+        bool yes = false;
+        while (dirent* e = readdir(d)) {
+            if (yes) break;
+            if (e->d_name[0] < '0' || e->d_name[0] > '9') continue;
+            yes = read_word(std::string("/proc/") + e->d_name + "/comm") == "meshcard";
+        }
+        closedir(d);
+        return yes;
+    }
+
+    void tick()
+    {
+        const uint64_t t = now_ms();
+        if (t < next) return;
+        next = t + 2000;
+        const std::string bl = "/sys/class/backlight/backlight/brightness";
+        int level = -1;
+        if (!read_int(bl, level)) return;
+        if (level > 0) {
+            on_level = level;
+            return;
+        }
+        if (!plugged() || meshcard_running()) return;
+        int max = 100;
+        read_int("/sys/class/backlight/backlight/max_brightness", max);
+        const int want = on_level > 0 ? on_level : max;
+        if (FILE* f = fopen(bl.c_str(), "w")) {
+            fprintf(f, "%d\n", want);
+            fclose(f);
+        }
+    }
+};
+
 }  // namespace
 
 int main(int argc, char** argv)
@@ -135,11 +218,13 @@ int main(int argc, char** argv)
     signal(SIGPIPE, SIG_IGN);
 
     Alarm alarm;
+    KeepLit keep_lit;
     while (!g_stop) {
         const int fd = connect_api(port);
         if (fd < 0) {
             for (int i = 0; i < 30 && !g_stop; ++i) {
                 alarm.tick();
+            keep_lit.tick();
                 usleep(100000);
             }
             continue;
@@ -160,6 +245,7 @@ int main(int argc, char** argv)
             pollfd p{fd, POLLIN, 0};
             const int r = poll(&p, 1, 100);
             alarm.tick();
+            keep_lit.tick();
             if (r < 0 && errno != EINTR) break;
             if (r <= 0) continue;
             uint8_t buf[1024];
@@ -173,9 +259,13 @@ int main(int argc, char** argv)
                 if (fr.which_payload_variant != meshtastic_FromRadio_packet_tag || !synced) return;
                 const meshtastic_MeshPacket& pk = fr.packet;
                 if (pk.which_payload_variant != meshtastic_MeshPacket_decoded_tag) return;
-                if (pk.decoded.portnum != meshtastic_PortNum_TEXT_MESSAGE_APP) return;
+                if (pk.decoded.portnum != meshtastic_PortNum_TEXT_MESSAGE_APP &&
+                    pk.decoded.portnum != meshtastic_PortNum_RANGE_TEST_APP)  // "seq N": a message too
+                    return;
                 if (pk.from == my_num || pk.decoded.emoji != 0) return;  // own echo, reactions
                 const bool dm = pk.to == my_num;
+                // That chat is open on screen: you are reading it, no ring.
+                if (alert_chat_is_open(dm, dm ? pk.from : pk.channel)) return;
                 const AlertConf c = alert_conf_load();
                 if (c.on && (dm || c.all)) alarm.start();
             });

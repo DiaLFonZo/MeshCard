@@ -431,6 +431,12 @@ ExternalNotificationModule::ExternalNotificationModule()
 
 ProcessMessage ExternalNotificationModule::handleReceived(const meshtastic_MeshPacket &mp)
 {
+#if defined(MESHCARD_ESP32)
+    // Cardputer ADV: the MeshCard screens ring for messages, with the Zero's sounds and rules (no ring for the
+    // chat on screen), so this one stays quiet.
+    (void)mp;
+    return ProcessMessage::CONTINUE;
+#endif
     // Trigger external notification if enabled and not muted; isSilenced is from temporary mute toggles
     if (moduleConfig.external_notification.enabled && !isSilenced) {
         if (!isFromUs(&mp)) {

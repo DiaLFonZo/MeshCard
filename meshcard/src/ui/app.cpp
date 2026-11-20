@@ -334,6 +334,17 @@ void App::handle_key(const Key& pressed)
         lv_obj_add_flag(notice_, LV_OBJ_FLAG_HIDDEN);
         notice_until_ = 0;
     }
+#if defined(MESHCARD_ESP32)
+    // Cardputer ADV (no PSRAM): Enter is what opens a page. When memory is already low,
+    // building one more could run it out: say so instead, and let Esc free a page first.
+    if (key.k == K::Enter && !s->wants_text() &&
+        (heap_caps_get_free_size(MALLOC_CAP_INTERNAL) < 10 * 1024 ||
+         heap_caps_get_largest_free_block(MALLOC_CAP_INTERNAL) < 5 * 1024)) {
+        toast("Memory low: press Esc to go back first", true);
+        update_chrome();
+        return;
+    }
+#endif
     if (!s->on_key(key)) {
         if (key.k == K::Esc) {
             if (stack_.size() > 1) {

@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-only
 // MeshCard on the Cardputer ADV (ESP32-S3): runs the MeshCard screens as a task
 // inside the Meshtastic firmware. Draws on the built-in ST7789 (240x135), reads
-// the TCA8418 keyboard and talks to the radio through the firmware's local
-// client (mc_link_read / mc_link_write, see ui/mesh.cpp).
+// the TCA8418 keyboard and uses the radio firmware's own data and mesh service
+// directly (the mc_* functions, see ui/mesh.cpp and src/meshcard/LocalUiAPI.cpp).
 #if defined(MESHCARD_ESP32)
 
 #include <Arduino.h>
@@ -391,9 +391,11 @@ public:
         if (now < 25000) return;  // let the radio and Bluetooth settle first
         // Home is left out: its rows only jump to the other tabs, tested here anyway.
         static const int order[] = {kTabSetup, kTabRadio, kTabChats, kTabNodes, kTabMap};
-        if (tab_i_ >= 5) {
-            if (!done_) Serial.println("MeshCard: SELFTEST DONE");
-            done_ = true;
+        if (tab_i_ >= 5) {  // one round done: start again (runs until the next flash)
+            Serial.printf("MeshCard: SELFTEST ROUND %d DONE\n", ++round_);
+            tab_i_ = 0;
+            row_   = 0;
+            step_  = 0;
             return;
         }
         const int want = order[tab_i_];
@@ -459,6 +461,7 @@ private:
     int tab_i_     = 0;
     int step_      = 0;
     int row_       = 0;
+    int round_     = 0;
     bool done_     = false;
 };
 #endif
@@ -535,8 +538,10 @@ void ui_task(void*)
         while (!keys.empty()) {
             const Key k = keys.front();
             keys.pop_front();
+            alert_key();  // any key stops the alarm, as on the Zero
             if (light.key(k)) app.handle_key(k);
         }
+        alert_tick();
         app.tick();
         if (app.take_screen_off_request()) light.turn_off();
         light.tick(app.wake_count(), battery_info().charging);

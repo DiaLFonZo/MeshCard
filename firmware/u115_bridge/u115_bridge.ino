@@ -47,9 +47,11 @@ extern "C" {
   int      bridgeUartAvailable(void);
   int      bridgeUartRead(void);
   void     bridgeUartWrite(uint8_t b);
+  void     bridgeWakeArm(void);
+  void     bridgeRest(void);
 }
 
-#define BRIDGE_VERSION   3
+#define BRIDGE_VERSION   4
 #define BRIDGE_BAUD      115200
 #define MAX_PAYLOAD      300
 #define BUSY_TIMEOUT_MS  100
@@ -192,17 +194,34 @@ void setup() {
   sendFrame(0xE0, &v, 1);
 }
 
-void loop() {
+// One pass: take bytes, report a DIO1 rising edge. Returns true when it did something.
+static bool work() {
+  bool did = false;
   uint32_t now = bridgeMs();
   while (bridgeUartAvailable()) {
     lastByteMs = now;
     feedByte((uint8_t)bridgeUartRead());
+    did = true;
   }
   // drop a half-received frame if the host went quiet
   if (st != ST_SYNC && now - lastByteMs > FRAME_IDLE_MS) st = ST_SYNC;
 
-  // DIO1 is polled: report each rising edge
+  // report each rising edge of DIO1
   int d = bridgeDio1();
-  if (d && !lastDio1) sendFrame(0xE1, NULL, 0);
+  if (d && !lastDio1) { sendFrame(0xE1, NULL, 0); did = true; }
   lastDio1 = d;
+  return did;
+}
+
+void loop() {
+  if (work() || st != ST_SYNC) return;   // busy, or mid-frame (its timeout needs the clock running)
+  // Nothing to do: rest until a pin edge (see bridgeRest in bridge_board.c). Armed first, then a
+  // last look for 100 us: a byte whose start bit came just before the arm lands within one byte
+  // time (87 us at 115200), any later start bit or DIO1 edge ends the rest.
+  bridgeWakeArm();
+  for (int i = 0; i < 10; i++) {
+    if (work()) return;
+    CyDelayUs(10);
+  }
+  bridgeRest();
 }

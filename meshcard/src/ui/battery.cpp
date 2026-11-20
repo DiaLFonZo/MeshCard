@@ -40,11 +40,14 @@ bool read_long(const std::string& path, long& out)
     return static_cast<bool>(in >> out);
 }
 
+// The whole first line: a status can be two words ("Not charging", plugged in and full);
+// reading one word gave "Not", so a full Zero never counted as plugged (2026-11-20).
 std::string read_word(const std::string& path)
 {
     std::ifstream in(path);
     std::string s;
-    in >> s;
+    std::getline(in, s);
+    while (!s.empty() && (s.back() == '\r' || s.back() == ' ')) s.pop_back();
     return s;
 }
 

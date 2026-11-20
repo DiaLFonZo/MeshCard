@@ -78,18 +78,40 @@ public:
         double my_lat = 0, my_lon = 0;
         const bool have_me = mesh.my_position(my_lat, my_lon);
 
+        // Only what the list shows, copied per node: the full node record is 300+ bytes, and
+        // on the ADV the nodes are read one at a time from the firmware (no pointers to keep).
         struct Entry {
-            const meshtastic_NodeInfo* n;
-            double dist;
+            uint32_t num        = 0;
+            uint32_t last_heard = 0;
+            float snr           = 0;
+            double dist         = -1;
+            uint8_t hops_away   = 0;
+            bool has_hops_away  = false;
+            bool is_favorite    = false;
+            bool is_ignored     = false;
+            bool via_mqtt       = false;
+            char long_name[sizeof(meshtastic_User::long_name)] = "";
         };
         std::vector<Entry> entries;
+        entries.reserve(mesh.nodes.size());
         online_ = 0;
         for (const auto& [num, n] : mesh.nodes) {
-            double lat, lon, dist = -1;
+            if (num == 0) continue;  // ADV: the list shrank while being read
+            Entry e;
+            double lat, lon;
             if (have_me && num != mesh.my_num && Mesh::node_position(n, lat, lon)) {
-                dist = geo_distance_m(my_lat, my_lon, lat, lon);
+                e.dist = geo_distance_m(my_lat, my_lon, lat, lon);
             }
-            entries.push_back({&n, dist});
+            e.num           = num;
+            e.last_heard    = n.last_heard;
+            e.snr           = n.snr;
+            e.hops_away     = static_cast<uint8_t>(n.hops_away);
+            e.has_hops_away = n.has_hops_away;
+            e.is_favorite   = n.is_favorite;
+            e.is_ignored    = n.is_ignored;
+            e.via_mqtt      = n.via_mqtt;
+            if (n.has_user) snprintf(e.long_name, sizeof(e.long_name), "%s", n.user.long_name);
+            entries.push_back(e);
             if (num == mesh.my_num || (n.last_heard && now - n.last_heard < kOnlineWindowS)) ++online_;
         }
         total_ = static_cast<int>(entries.size());
@@ -97,17 +119,17 @@ public:
         const uint32_t me = mesh.my_num;
         const Sort sort   = sort_;
         std::sort(entries.begin(), entries.end(), [me, sort](const Entry& a, const Entry& b) {
-            if ((a.n->num == me) != (b.n->num == me)) return a.n->num == me;
-            if (a.n->is_favorite != b.n->is_favorite) return a.n->is_favorite;
+            if ((a.num == me) != (b.num == me)) return a.num == me;
+            if (a.is_favorite != b.is_favorite) return a.is_favorite;
             switch (sort) {
                 case Sort::Name: {
-                    const int c = strcasecmp(a.n->user.long_name, b.n->user.long_name);
+                    const int c = strcasecmp(a.long_name, b.long_name);
                     if (c != 0) return c < 0;
                     break;
                 }
                 case Sort::Hops: {
-                    const int ha = a.n->has_hops_away ? a.n->hops_away : 99;
-                    const int hb = b.n->has_hops_away ? b.n->hops_away : 99;
+                    const int ha = a.has_hops_away ? a.hops_away : 99;
+                    const int hb = b.has_hops_away ? b.hops_away : 99;
                     if (ha != hb) return ha < hb;
                     break;
                 }
@@ -120,8 +142,8 @@ public:
                 default:
                     break;
             }
-            if (a.n->last_heard != b.n->last_heard) return a.n->last_heard > b.n->last_heard;
-            return a.n->num < b.n->num;
+            if (a.last_heard != b.last_heard) return a.last_heard > b.last_heard;
+            return a.num < b.num;
         });
 
         // Keep the cursor on the same node while the list reorders underneath.
@@ -131,7 +153,7 @@ public:
         ui::ListItems items;
         nums_.clear();
         for (const Entry& e : entries) {
-            const meshtastic_NodeInfo& n = *e.n;
+            const Entry& n = e;
             ui::ListItem it;
             it.prefix           = ui::clean(mesh.short_name(n.num), true);
             it.has_prefix_color = true;

@@ -130,6 +130,24 @@ void RangeTestModuleRadio::sendPayload(NodeNum dest, bool wantReplies)
     p->decoded.payload.size = strlen(heartbeatString); // You must specify how many bytes are in the reply
     memcpy(p->decoded.payload.bytes, heartbeatString, p->decoded.payload.size);
 
+#if defined(MESHCARD_UI) || defined(ARCH_PORTDUINO)
+    // MeshCard (ADV screens, or the Zero app through its clients): show our own "seq N" in
+    // the channel, as sent by us.
+    {
+        meshtastic_MeshPacket copy = *p;
+        copy.from = nodeDB->getNodeNum();
+        if (!copy.rx_time)
+            copy.rx_time = getValidTime(RTCQualityFromNet);
+#if defined(MESHCARD_UI)
+        if (meshcardTap)
+            meshcardTap(&copy);
+#else
+        if (meshtastic_MeshPacket *c = packetPool.allocCopy(copy))
+            service->sendToPhone(c);
+#endif
+    }
+#endif
+
     service->sendToMesh(p);
 
     // TODO: Handle this better. We want to keep the phone awake otherwise it stops sending.

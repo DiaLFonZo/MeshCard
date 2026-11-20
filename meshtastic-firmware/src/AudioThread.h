@@ -78,6 +78,32 @@ class AudioThread : public concurrency::OSThread
     }
     void resetGain() { setGain(AUDIO_OUTPUT_GAIN); }
 
+    // MeshCard: play mono 16-bit samples made one at a time (next(s) returns false at the end), so a sound needs
+    // no buffer. Blocks until done.
+    template <typename F> void playSamples(int rate, F next)
+    {
+        if (i2sRtttl != nullptr) {
+            i2sRtttl->stop();
+            i2sRtttl = nullptr;
+        }
+        rtttlFile = nullptr;
+        ampEnable(true);
+        setCPUFast(true);
+        if (audioOut->SetRate(rate) && audioOut->SetBitsPerSample(16) && audioOut->SetChannels(2) && audioOut->begin()) {
+            int16_t s = 0;
+            int16_t frame[2];
+            while (next(s)) {
+                frame[0] = frame[1] = s;
+                while (!audioOut->ConsumeSample(frame))
+                    delay(1);
+            }
+            audioOut->flush();
+        }
+        audioOut->stop();
+        setCPUFast(false);
+        ampEnable(false);
+    }
+
     void readAloud(const char *text)
     {
         if (i2sRtttl != nullptr) {

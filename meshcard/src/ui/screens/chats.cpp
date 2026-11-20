@@ -51,7 +51,7 @@ public:
         lv_obj_align(empty_, LV_ALIGN_CENTER, 0, 0);
     }
     int tab() const override { return kTabChats; }
-    std::string hint() const override { return "Enter open   Tab next page   ? help   Hold Esc exit"; }
+    std::string hint() const override { return "Enter open   Del archive   Tab next page   ? help   Hold Esc exit"; }
 
     void refresh() override
     {
@@ -82,6 +82,7 @@ public:
 
         ui::ListItems items;
         keys_.clear();
+        is_chat_.clear();
         const auto add = [&](const Chat* c) {
             ui::ListItem it;
             it.text = mesh.chat_title(c->key);
@@ -104,6 +105,7 @@ public:
             }
             items.push_back(std::move(it));
             keys_.push_back(c->key);
+            is_chat_.push_back(true);
         };
         const auto header = [&](const std::string& text) {
             ui::ListItem it;
@@ -111,6 +113,7 @@ public:
             it.header = true;
             items.push_back(it);
             keys_.push_back(ChatKey{});
+            is_chat_.push_back(false);
         };
         header("Channels");
         for (const Chat* c : channels) add(c);
@@ -123,6 +126,7 @@ public:
             it.header    = false;
             items.push_back(it);
             keys_.push_back(ChatKey{true, 0});
+            is_chat_.push_back(false);
         }
         for (const Chat* c : dms) add(c);
         list_->set_items(items);
@@ -142,6 +146,38 @@ public:
             }
             return true;
         }
+        // Archive one chat: its messages are hidden, not deleted; the same key shows them again.
+        if ((key.k == K::Backspace || key.k == K::Delete) && mesh.ever_ready()) {
+            const size_t i = static_cast<size_t>(list_->selected());
+            if (i >= keys_.size() || i >= is_chat_.size() || !is_chat_[i]) return true;  // a header or a note
+            const ChatKey k     = keys_[i];
+            const std::string t = ui::clean(mesh.chat_title(k), true);
+            Mesh* m             = &mesh;
+            App* a              = &app;
+            if (mesh.chat_archived(k)) {
+                app.push(make_confirm(app, "Archive messages",
+                                      t + "\n\nHide its messages again, or show the archived ones?",
+                                      {"Cancel", "Archive", "Show archived"}, [a, m, k](int c) {
+                                          if (c == 1) {
+                                              m->archive_chat(k);
+                                              a->toast("Messages archived");
+                                          } else if (c == 2) {
+                                              m->unarchive_chat(k);
+                                              a->toast("Archived messages shown");
+                                          }
+                                      }));
+            } else {
+                app.push(make_confirm(app, "Archive messages",
+                                      t + "\n\nHide its messages? Nothing is deleted: Del on this chat shows them again.",
+                                      {"Cancel", "Archive"}, [a, m, k](int c) {
+                                          if (c == 1) {
+                                              m->archive_chat(k);
+                                              a->toast("Messages archived");
+                                          }
+                                      }));
+            }
+            return true;
+        }
         return false;
     }
 
@@ -149,6 +185,7 @@ private:
     std::unique_ptr<ui::ListView> list_;
     lv_obj_t* empty_ = nullptr;
     std::vector<ChatKey> keys_;
+    std::vector<bool> is_chat_;  // per row: a real chat (not a header or a note)
 };
 
 // -------------------------------------------------------------- reactions

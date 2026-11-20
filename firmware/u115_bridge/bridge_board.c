@@ -74,6 +74,34 @@ void bridgeUartWrite(uint8_t b) {
   UART_1_SpiUartWriteTxData(b);
 }
 
+/* ---- rest between jobs (v4, 2026-11-20) ----
+   The loop used to spin non-stop at full clock, inside the same package as the
+   radio, also while it transmits; U115 long sends arrived damaged at every
+   receiver while the same U115 received long packets fine. Now the CPU sleeps
+   (plain Sleep: clocks and the UART keep running) until a pin edge: the start
+   bit of a byte on the Grove RX (P3.0, falling) or DIO1 (P4.6, rising).
+   No interrupt handler is used: SEVONPEND lets a pending, disabled interrupt
+   end WFE. GPIO interrupt lines are 0..4 on this chip (global_irq = 4). */
+#define GPIO_INTR_CFG(p) (0x4004000Cu + (p) * 0x100u)
+#define GPIO_INTR(p)     (0x40040010u + (p) * 0x100u)
+#define CM0_SCR    0xE000ED10u
+#define NVIC_ICER  0xE000E180u
+#define NVIC_ICPR  0xE000E280u
+#define GPIO_IRQS  0x1Fu
+static void wakeInit(void) {
+  REG32(NVIC_ICER) = GPIO_IRQS;   /* never run a handler for these */
+  REG32(GPIO_INTR_CFG(3)) = (REG32(GPIO_INTR_CFG(3)) & ~(3u << 0))  | (2u << 0);   /* P3.0 falling */
+  REG32(GPIO_INTR_CFG(4)) = (REG32(GPIO_INTR_CFG(4)) & ~(3u << 12)) | (1u << 12);  /* P4.6 rising */
+  REG32(CM0_SCR) = (REG32(CM0_SCR) & ~(1u << 2)) | (1u << 4);   /* no deep sleep, SEVONPEND */
+}
+/* Call before looking for work: an edge after this wakes the next bridgeRest() at once. */
+void bridgeWakeArm(void) {
+  REG32(GPIO_INTR(3)) = 1u << 0;
+  REG32(GPIO_INTR(4)) = 1u << 6;
+  REG32(NVIC_ICPR) = GPIO_IRQS;
+}
+void bridgeRest(void) { __asm volatile ("wfe"); }
+
 void bridgeBoardInit(uint32_t baud) {
   /* The CubeCell start-up enables the timer interrupt (IRQ 13, CySysTimerIsr),
      whose handler calls pinMode() -> license freeze -> the chip restarts.
@@ -97,4 +125,5 @@ void bridgeBoardInit(uint32_t baud) {
   SPI_1_Start();
   uartBegin(baud);
   bridgeRadioReset();
+  wakeInit();
 }
