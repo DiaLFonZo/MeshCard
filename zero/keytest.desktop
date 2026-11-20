@@ -1,0 +1,6 @@
+[Desktop Entry]
+Name=Key Test
+Exec=/usr/bin/python3 /home/pi/u115/keytest.py
+Terminal=true
+Icon=share/images/cli_100.png
+Type=Application

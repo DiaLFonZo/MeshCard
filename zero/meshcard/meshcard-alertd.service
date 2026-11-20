@@ -1,0 +1,11 @@
+[Unit]
+Description=MeshCard message alarm (rings the speaker on new messages)
+After=pipewire.service wireplumber.service
+
+[Service]
+ExecStart=/home/pi/meshcard/meshcard-alertd
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=default.target

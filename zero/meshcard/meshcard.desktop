@@ -1,0 +1,9 @@
+[Desktop Entry]
+Type=Application
+Name=MeshCard
+Comment=Meshtastic on the Cardputer (U115)
+Exec=/home/pi/meshcard/meshcard.sh
+Icon=share/images/meshcard.png
+Terminal=false
+Categories=Network;
+StartupNotify=false

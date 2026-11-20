@@ -1,0 +1,7 @@
+# Virtual BaseUI screen for the Zero: no SDL in this build, so "X11" gives a
+# panel that draws nowhere. The Meshtastic app on the Zero shows it through
+# the API's screen mirroring (FromRadio.display_frame) and sends keys back.
+Display:
+  Panel: X11
+  Width: 320
+  Height: 170

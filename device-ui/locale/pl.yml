@@ -1,0 +1,184 @@
+pl:
+  no new messages: Brak wiadomości
+  1 of 1 nodes online: 1 z 1 węzłów online
+  DEL: ~
+  'User name: ': Nazwa
+  'Modem Preset: LONG FAST': 'Preset: LONG FAST'
+  'Channel: LongFast': 'Kanał: LongFast'
+  'Role: Client': 'Rola: Client'
+  'Screen Timeout: 60s': 'Wygaszanie ekranu: 60s'
+  'Screen Brightness: 60%': 'Jasność ekranu: 60%'
+  'Screen Calibration: default': 'Kalibracja ekranu: domyślna'
+  'Input Control: none/none': 'Kontrola wprowadzania: brak/brak'
+  'Language: English': 'Język: Angielski'
+  Configuration  Reset: Zresetuj konfigurację
+  Reboot / Shutdown: Zrestartuj / Wyłącz
+  Group Channels: Kanały grupowe
+  no messages: brak wiadomości
+  Settings: Ustawienia
+  Settings (advanced): Ustawienia (zaawansowane)
+  Locations Map: Mapa miejsc
+  'Locations Map (%d/%d)': 'Mapa miejsc (%d/%d)'
+  no chats: brak czatów
+  Node Options: Ustawienia węzła
+  Short Name: Krótka nazwa
+  Long Name: Długa nazwa
+  <unset>: Nieustawione
+  'FrequencySlot: 1 (902.0MHz)': 'Kanał częstotliwości: 1 (902.0MHz)'
+  'Brightness: 60%': 'Jasność: 60%'
+  'Timeout: 60s': 'Wygaszanie: 60s'
+  Mouse: Kursor
+  Keyboard: Klawiatura
+  Message Alert: Alerty dźwiękowe
+  "NodeDB Reset\nFactory Reset": |-
+    Reset NodeDB
+    Reset do ustawień domyślnych
+  Channel Name: Nazwa kanału
+  Pre-shared Key: Klucz PSK
+  "New Message from\n": |
+    Nowa wiadomość od
+  Resync ...: Resynchronizacja...
+  'User name: %s': 'Nazwa: %s'
+  'Device Role: %s': 'Rola: %s'
+  'Screen Calibration: %s': 'Kalibracja ekranu: %s'
+  done: wykonano
+  default: domyślny
+  'Region: %s': ~
+  'Modem Preset: %s': 'Preset: %s'
+  'Channel: %s': 'Kanał: %s'
+  'Language: %s': 'Język: %s'
+  'Screen Lock: off': 'Blokada ekranu: wyłączona'
+  'Theme: Dark': 'Skórka: Ciemny'
+  Mesh Detector: Wykrywanie sieci
+  Signal Scanner: Skaner sygnału
+  Trace Route: Śledzenie trasy
+  Neighbors: Sąsiedzi
+  Statistics: Statystyki
+  Packet Log: Dziennik pakietów
+  Settings & Tools: Ustawienia & Narzędzia
+  Node Search: Szukanie Węzła
+  Light\nDark: Jasny\nCiemny
+  Screen Lock: Blokada Ekranu
+  Lock PIN: Blokada PIN
+  Ringtone: Dzwonek
+  Zone: Strefa
+  City: Miasto
+  Unknown: Nieznany
+  Offline: ~
+  Public Key: Klucz publiczny
+  Hops away: Skoki
+  MQTT: ~
+  Position: Pozycja
+  Name: Nazwa
+  Active Chat: Aktywny czat
+  Telemetry: Telemetria
+  IAQ: ~
+  Start: ~
+  'Theme: %s': 'Skórka: %s'
+  'uptime 00:00:00': 'Aktywny: 00:00:00'
+  'Heap: 0\nLVGL: 0': ~
+  Meshtastic: ~
+  Packet Statistics: Statystyki pakietu
+  "LONG FAST\nLONG SLOW\n-- deprecated --\nMEDIUM SLOW\nMEDIUM FAST\nSHORT SLOW\nSHORT FAST\nLONG MODERATE\nSHORT TURBO": ~
+  "Client\nClient Mute\nRouter\n-- deprecated --\nRepeater\nTracker\nSensor\nTAK\nClient Hidden\nLost & Found\nTAK Tracker": ~
+  "Dark\nLight": |-
+    Ciemny
+    Jasny
+  none: brak
+  Default: Domyślny
+  OK: ~
+  Cancel: Anuluj
+  'FrequencySlot: %d (%g MHz)': 'Kanał: %d (%g MHz)'
+  'Brightness: %d%%': 'Jasność: %d%%'
+  'Timeout: off': 'Wygaszanie: wył.'
+  'Timeout: %ds': 'Wygaszanie: %ds'
+  Stop: ~
+  "choose\nnode": |-
+    wybierz
+    węzeł
+  choose target node: Wybierz adresata
+  'heard: !%08x': Widziano !%08x
+  'Packet Log: %d': 'Dziennik pakietów: %d'
+  'Screen Timeout: off': 'Wygaszanie ekranu: wył.'
+  'Screen Timeout: %ds': 'Wygaszanie ekranu: %ds'
+  'Screen Brightness: %d%%': 'Jasność ekranu: %d%%'
+  'Screen Lock: %s': 'Blokada ekranu: %s'
+  'on': włączony
+  'off': wyłączony
+  'Message Alert: %s': 'Dzwonek alertu: %s'
+  Util %0.1f%%  Air %0.1f%%: ~
+  'hops: %d': 'Skoki: %d'
+  unknown: nieznany
+  <no name>: <brak nazwy>
+  '%d active chat(s)': 'Aktywne czaty: %d'
+  "New message from \n%s": |-
+    Nowa wiadomość od 
+    %s
+  'Input Control: %s/%s': 'Kontrola wprowadzania: %s/%s'
+  '%d of %d nodes online': '%d z %d węzłów online'
+  Filtering ...: Filtrowanie...
+  'Filter: %d of %d nodes': 'Wyfiltrowano: %d z %d węzłów'
+  now: teraz
+  '%d new message': '%d nowa wiadomość'
+  '%d new messages': '%d nowe wiadomości'
+  'uptime: %02d:%02d:%02d': 'aktywny: %02d:%02d:%02d'
+  'Heap: %d (%d%%)\nLVGL: %d (%d%%)': ~
+  Configuration Reset: Reset konfiguracji
+  Tools: Narzędzia
+  Filter: Filtruj
+  Highlight: Podświetl
+  Primary Channel: Kanał główny
+  Secondary Channels: Kanały dodatkowe
+  Rebooting ...: Uruchamiam ponownie ...
+  Shutting down ...: Wyłączam ...
+  LoRa 0.0 MHz: ~
+  silent: cichy
+  'WiFi: <not setup>': 'WiFi: <nieskonfigurowane>'
+  'Lock: off/off': 'Blokada: wyłączony/wyłączony'
+  'Message Alert Buzzer: on': 'Dzwonek alertu: włączony'
+  LoRa TX off!: LoRa TX wyłączone!
+  WiFi SSID: ~
+  WiFi pre-shared Key: Hasło WiFi
+  Settings Lock: Blokada ustawień
+  'Lock: %s/%s': 'Blokada: %s/%s'
+  Enter Text ...: Wpisz tekst...
+  '!Enter Filter ...': '!Wpisz filtr...'
+  Enter Filter ...: Wpisz filtr...
+  'WiFi: %s': ~
+  Share my node: Udostępnij mój węzeł
+  'Public key: %s': 'Klucz publiczny: %s'
+  <not set>: <nieustawione>
+  region unset: brak regionu
+  Banner & Sound: Baner i dźwięk
+  Banner only: Tylko baner
+  Sound only: Tylko dźwięk
+  no signal: brak sygnału
+  Restoring messages ...: Przywracanie wiadomości...
+  Reboot into BaseUI?: Uruchomić ponownie w BaseUI?
+  no SD card detected: nie wykryto karty SD
+  no public key: brak klucza publicznego
+  map tiles not found!: nie znaleziono kafelków mapy!
+  Backup & Restore: Kopia i przywracanie
+  Backup: Kopia zapasowa
+  Restore: Przywróć
+  Public/Private Key: Klucz publiczny/prywatny
+  "NodeDB Reset\nFactory Reset\nClear Chat History": "Reset NodeDB\nReset fabryczny\nWyczyść historię czatu"
+  Channel: Kanał
+  Please set region and name: Ustaw region i nazwę
+  '>> Programming mode <<': '>> Tryb programowania <<'
+  No map tiles found on SDCard!: Brak kafelków mapy na karcie SD!
+  'Modem Preset: custom': 'Preset: własny'
+  Connected!: Połączono!
+  Disconnected!: Rozłączono!
+  Failed to write keys!: Nie udało się zapisać kluczy!
+  Failed to restore keys!: Nie udało się przywrócić kluczy!
+  Failed to parse keys!: Nie udało się odczytać kluczy!
+  Failed to retrieve keys!: Nie udało się pobrać kluczy!
+  "%s: %d GB (%s)\nUsed: %0.2f GB (%d%%)": "%s: %d GB (%s)\nZajęte: %0.2f GB (%d%%)"
+  'Used: ...': 'Zajęte: ...'
+  SD slot empty: Brak karty SD
+  SD ejected: Karta SD wyjęta
+  SD invalid format: Zły format karty SD
+  SD mbr not found: Brak MBR na karcie SD
+  SD card error: Błąd karty SD
+  SD unknown error: Nieznany błąd karty SD

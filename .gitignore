@@ -1,0 +1,15 @@
+# Build output
+build/
+.pio/
+*.o
+*.elf
+*.map
+
+# Editor / OS
+.vscode/ipch/
+Thumbs.db
+.DS_Store
+
+# Secrets
+.env
+*.local.json

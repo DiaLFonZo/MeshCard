@@ -1,0 +1,19 @@
+[Unit]
+Description=Meshtastic daemon (M5Stack U115 radio on the Grove port)
+After=network-online.target bluetooth.service
+
+[Service]
+Type=simple
+User=pi
+Group=pi
+# '+' = run as root: switch the Grove 5V on before start (the U115 needs it),
+# give the U115 two seconds to boot, and switch it off again when stopped.
+ExecStartPre=+/bin/sh -c 'echo 1 > /sys/class/leds/grove_5v_out/brightness; sleep 2'
+ExecStart=/usr/local/bin/meshtasticd -c /etc/meshtasticd/config.yaml -d /home/pi/.meshtasticd
+ExecStopPost=+/bin/sh -c 'echo 0 > /sys/class/leds/grove_5v_out/brightness'
+Environment=U115_PORT=/dev/serial0
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

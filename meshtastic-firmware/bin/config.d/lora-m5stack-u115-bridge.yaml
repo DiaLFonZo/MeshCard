@@ -1,0 +1,18 @@
+Meta:
+  name: M5Stack U115 (UART bridge firmware)
+  support: community
+  compatible:
+    - uart
+
+# Needs a meshtasticd built with -D PINEDIO_U115 (env native-u115) and the
+# u115_bridge firmware on the U115. Serial port: env U115_PORT, default /dev/serial0.
+# Pin numbers are the bridge's virtual pins, not GPIOs.
+Lora:
+  Module: sx1262
+  spidev: ch341
+  CS: 0
+  Reset: 2
+  Busy: 4
+  IRQ: 6
+  DIO2_AS_RF_SWITCH: true
+  # Ra-07H uses a crystal, not a TCXO (TCXO init fails with -707), so no DIO3_TCXO_VOLTAGE.

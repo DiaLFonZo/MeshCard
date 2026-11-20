@@ -1,0 +1,21 @@
+# Radio daemon (our U115 build of meshtasticd) for MeshZero on the Cardputer Zero.
+# The U115 (Ra-07H) sits on the Grove port; the bridge firmware tunnels the SX1262's
+# SPI over the UART (/dev/serial0), which our build exposes as spidev "ch341".
+---
+Lora:
+  Module: sx1262
+  spidev: ch341
+  CS: 0
+  Reset: 2
+  Busy: 4
+  IRQ: 6
+  DIO2_AS_RF_SWITCH: true
+
+# No GPS section: the Grove serial port is the radio's link, not a GNSS receiver.
+
+Logging:
+  LogLevel: info   # debug, info, warn, error
+
+General:
+  MaxNodes: 200
+  MaxMessageQueue: 100

@@ -1,0 +1,6 @@
+[Desktop Entry]
+Name=Meshtastic
+Exec=/home/pi/u115/meshtastic-app.sh
+Terminal=false
+Icon=share/images/meshtastic_100.png
+Type=Application

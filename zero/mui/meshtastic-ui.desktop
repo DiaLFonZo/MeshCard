@@ -1,0 +1,6 @@
+[Desktop Entry]
+Name=Meshtastic UI
+Exec=/home/pi/u115/mui/mui-app.sh
+Terminal=false
+Icon=share/images/meshtastic_100.png
+Type=Application
