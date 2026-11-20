@@ -11,3 +11,7 @@ Meshtastic on the M5Stack Cardputer, with an M5Stack U115 LoRa unit as the radio
 - **saved/** – known-good binaries.
 
 License: GPL-3.0 (see `meshcard/LICENSE` and `meshtastic-firmware/LICENSE`).
+
+## Initial mockup
+
+![Chats list mockup, ADV and Zero](docs/mockups/chats-list-mockup.png)
