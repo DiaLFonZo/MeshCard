@@ -13,3 +13,6 @@ Thumbs.db
 # Secrets
 .env
 *.local.json
+
+# Build results from tools/*.sh
+out/

@@ -10,6 +10,8 @@ Meshtastic on the M5Stack Cardputer, with an M5Stack U115 LoRa unit as the radio
 - **tools/** – build and test scripts.
 - **saved/** – known-good binaries.
 
+How to build and install: [docs/HOWTO.md](docs/HOWTO.md)
+
 License: GPL-3.0 (see `meshcard/LICENSE` and `meshtastic-firmware/LICENSE`).
 
 ## Initial mockups
