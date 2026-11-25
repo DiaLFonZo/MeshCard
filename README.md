@@ -9,7 +9,7 @@ Meshtastic and MeshZero to drive it.
 
 | Folder | What it is | Origin |
 |---|---|---|
-| `meshcard/` | The MeshCard screen app | Modified copy of [MeshZero](https://github.com/s0liton/MeshZero) |
+| `meshcard/` | Shared ADV and Zero interface, pinned as a Git submodule | [MeshZero fork](https://github.com/DiaLFonZo/MeshZero) based on [upstream MeshZero](https://github.com/s0liton/MeshZero) |
 | `meshtastic-firmware/` | Meshtastic firmware with U115 support and the MeshCard screens for the Cardputer ADV (`m5stack-cardputer-adv-meshcard`) | Modified copy of [Meshtastic firmware](https://github.com/meshtastic/firmware) |
 | `device-ui/` | Meshtastic UI used by the Cardputer Zero build | Modified copy of [Meshtastic device-ui](https://github.com/meshtastic/device-ui) |
 | `firmware/` | Bridge firmware that runs on the U115 (radio over UART) | Original MeshCard work |
@@ -18,7 +18,8 @@ Meshtastic and MeshZero to drive it.
 | `docs/` | How-to and screen mockups | Original MeshCard work |
 | `saved/` | Known-good binaries, with their sources listed in [saved/README.md](saved/README.md) | Built from this repository |
 
-Each modified copy has a `MESHCARD_CHANGES.md` listing what MeshCard changed.
+Each imported project has a `MESHCARD_CHANGES.md` listing what MeshCard changed.
+See the [development workflow](docs/HOWTO.md#shared-ui-development) for submodule updates.
 
 How to build and install: [docs/HOWTO.md](docs/HOWTO.md)
 

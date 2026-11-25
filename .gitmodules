@@ -1,0 +1,3 @@
+[submodule "meshcard"]
+	path = meshcard
+	url = https://github.com/DiaLFonZo/MeshZero.git

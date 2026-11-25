@@ -8,8 +8,9 @@ set -e
 BASE="$(cd "$(dirname "$0")/.." && pwd)"
 W=/root/meshcard
 SIZE=${2:-zero}
+[ -f "$BASE/meshcard/CMakeLists.txt" ] || { echo "Initialize meshcard with git submodule update --init" >&2; exit 1; }
 mkdir -p $W
-cp -ru --preserve=timestamps "$BASE/meshcard/." $W/
+rsync -a --delete --exclude '/.git' --exclude 'build*/' "$BASE/meshcard/" "$W/"
 cd $W
 sed -i "s/\r$//" tools/*.sh tools/*.py
 [ -d /root/mcvenv ] || { python3 -m venv /root/mcvenv && /root/mcvenv/bin/pip -q install meshtastic; }

@@ -110,11 +110,21 @@ wsl -d Debian -u root -- bash "/mnt/c/00 - GitHub/MeshCard/tools/zero_build.sh"
 
 ```
 python tools/zero_put.py out/zero/meshcard-arm64 /home/pi/meshcard/meshcard.new
-python tools/zero_ssh.py "mv -f /home/pi/meshcard/meshcard.new /home/pi/meshcard/meshcard"
+python tools/zero_ssh.py "chmod 755 /home/pi/meshcard/meshcard.new && mv -f /home/pi/meshcard/meshcard.new /home/pi/meshcard/meshcard"
 ```
 
 Launcher entry, start script and alert service: `zero/meshcard/`.
 The phone app connects to the Zero over the network (Linux meshtasticd has no Bluetooth).
+
+### Shared UI development
+
+After the pinned commit is available on the fork, run `git submodule update --init` from MeshCard to populate `meshcard/`. Edit the shared screens there and use the existing ADV, Zero, and preview build scripts from the MeshCard workspace.
+
+The first submodule pin imports the MeshCard UI from parent commit `674210e` onto MeshZero's original base `22ec6f9`. The MeshCard history retains the original implementation and attribution, including the credits and licensing update in `d222443`. See [Third-party notices](../THIRD_PARTY_NOTICES.md) for the project and asset credits.
+
+Keep UI changes independent of U115 provisioning in `zero/meshzero/` and the radio firmware. To integrate upstream updates, fetch `https://github.com/s0liton/MeshZero.git` in the submodule, merge the upstream branch into `meshcard-integration`, and build and test both devices before advancing the MeshCard pin.
+
+Before a Zero deployment, copy the working `meshcard` and `meshcard-alertd` binaries to a separate rollback folder on the device. Upload the candidate beside the live executable, set its executable bit, and rename it into place. Launch it from the device launcher. To roll back, copy the saved binary to a temporary file beside the live binary and rename it over the live binary, then relaunch.
 
 ---
 

@@ -7,9 +7,10 @@ set -e
 BASE="$(cd "$(dirname "$0")/.." && pwd)"
 W=/root/fw-adv
 ENV=${2:-m5stack-cardputer-adv-meshcard}
+[ -f "$BASE/meshcard/CMakeLists.txt" ] || { echo "Initialize meshcard with git submodule update --init" >&2; exit 1; }
 mkdir -p $W /root/meshcard
 rsync -a --exclude '.pio/' --exclude 'build/' "$BASE/meshtastic-firmware/" $W/
-rsync -a --delete --exclude 'build*/' --exclude '.git/' "$BASE/meshcard/" /root/meshcard/
+rsync -a --delete --exclude 'build*/' --exclude '/.git' "$BASE/meshcard/" /root/meshcard/
 if [ "$1" = "selftest" ]; then
   echo "#define MC_SELFTEST 1" > /root/meshcard/src/ui/selftest_on.h; echo "SELFTEST BUILD"
 else
