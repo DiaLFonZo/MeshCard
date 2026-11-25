@@ -197,10 +197,20 @@ public:
     void tick(uint32_t wake_count, bool plugged)
     {
         const uint32_t now = millis();
+        // The USB "plugged" sign flickers while a computer is attached; each flicker used to
+        // count as a plug-in and lit the screen after Esc (2026-11-22). A change now counts
+        // only once it has held for 5 s.
+        if (plugged != was_plugged_) {
+            if (!plug_since_) plug_since_ = now ? now : 1;
+            if (now - plug_since_ < 5000) plugged = was_plugged_;
+        } else {
+            plug_since_ = 0;
+        }
         // A new message, or plugging in / unplugging, lights the screen again.
         if (wake_count != seen_wake_ || plugged != was_plugged_) {
             seen_wake_   = wake_count;
             was_plugged_ = plugged;
+            plug_since_  = 0;
             last_        = now;
             forced_off_  = false;
         }
@@ -222,7 +232,7 @@ private:
 
     bool eating_      = false, forced_off_ = false, was_plugged_ = false;
     int level_        = -1;
-    uint32_t last_    = 0, eat_until_ = 0;
+    uint32_t last_    = 0, eat_until_ = 0, plug_since_ = 0;
     uint32_t seen_wake_ = 0;
 };
 

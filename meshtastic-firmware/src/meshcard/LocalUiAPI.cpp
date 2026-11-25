@@ -975,23 +975,18 @@ extern "C" bool mc_platform_battery(int *percent, bool *charging)
     if (!powerStatus || !powerStatus->getHasBattery())
         return false;
     *percent = powerStatus->getBatteryChargePercent();
-    // The ADV has no "power in" pin; the firmware only calls it plugged once the
-    // battery reads full. A computer on the USB port is also seen right away.
-    // (A voltage-jump guess was rejected: radio sends make the voltage jump too.)
+    // The ADV has no "power in" pin. The only sure sign of power is a computer on the
+    // USB port. Any voltage guess is wrong: the ADV's reading is raised 2% on purpose,
+    // so a full battery off the charger (4.18 V reads 4.26 V) passes both the firmware's
+    // "over 4.20 V = USB" and a "full = plugged" rule - lightning shown and screen kept
+    // on while unplugged (2026-11-20). So getIsCharging()/getHasUSB() are not used here.
+    // A wall charger is not seen: it shows and dims as on battery.
+    // (A voltage-jump guess was rejected too: radio sends make the voltage jump.)
     bool usbHost = false;
 #if defined(ARDUINO_USB_MODE) && ARDUINO_USB_MODE == 1
     usbHost = HWCDC::isPlugged();
 #endif
-    // "Full" in the firmware is above 4.20 V, but this ADV reads 4.16 V at most while the
-    // charger holds it full, so it never counted as plugged (screen went off, 2026-11-20).
-    // A steady level, not a jump: on from 4.15 V, off again under 4.12 V.
-    static bool full = false;
-    const int mv = powerStatus->getBatteryVoltageMv();
-    if (mv >= 4150)
-        full = true;
-    else if (mv < 4120)
-        full = false;
-    *charging = powerStatus->getIsCharging() || powerStatus->getHasUSB() || usbHost || full;
+    *charging = usbHost;
     return true;
 }
 
