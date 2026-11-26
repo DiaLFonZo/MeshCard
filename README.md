@@ -15,7 +15,7 @@ Meshtastic and MeshZero to drive it.
 | `firmware/` | Bridge firmware that runs on the U115 (radio over UART) | Original MeshCard work |
 | `zero/` | Cardputer Zero setup files | Original MeshCard work |
 | `tools/` | Build, flash and test scripts | Original MeshCard work |
-| `docs/` | How-to and screen mockups | Original MeshCard work |
+| `docs/` | How-to and screenshots | Original MeshCard work |
 | `saved/` | Known-good binaries, with their sources listed in [saved/README.md](saved/README.md) | Built from this repository |
 
 Each imported project has a `MESHCARD_CHANGES.md` listing what MeshCard changed.
@@ -62,11 +62,23 @@ the MIT license ([its LICENSE](firmware/u115_bridge/LICENSE)). The copied projec
 Binaries built from this repository are covered by the same license; the
 sources of the saved binaries are listed in [saved/README.md](saved/README.md).
 
-## Initial mockups
+## Cardputer Zero screenshots
 
-![Chats](docs/mockups/1-chats.png)
-![Conversation](docs/mockups/2-conversation.png)
-![Nodes](docs/mockups/3-nodes.png)
-![Node details](docs/mockups/4-node-details.png)
-![Radio](docs/mockups/5-radio.png)
-![Settings](docs/mockups/6-settings.png)
+These are 320 × 170 captures of MeshCard running against a simulated mesh.
+Use [the screenshot script](docs/HOWTO.md#5-pc-preview-screenshots-without-a-device)
+to regenerate them or capture the ADV layout.
+
+| Home | Chats | Conversation |
+| --- | --- | --- |
+| ![Home](docs/screenshots/zero/home.png) | ![Chats](docs/screenshots/zero/chats.png) | ![Conversation](docs/screenshots/zero/conversation.png) |
+
+| Nodes | Node details | Radio | Settings |
+| --- | --- | --- | --- |
+| ![Nodes](docs/screenshots/zero/nodes.png) | ![Node details](docs/screenshots/zero/node-details.png) | ![Radio](docs/screenshots/zero/radio.png) | ![Settings](docs/screenshots/zero/settings.png) |
+
+| Radar | Street map | Topographic map |
+| --- | --- | --- |
+| ![Radar](docs/screenshots/zero/radar.png) | ![Street map](docs/screenshots/zero/street.png) | ![Topographic map](docs/screenshots/zero/topo.png) |
+
+See the [map controls and offline cache](docs/HOWTO.md#maps-on-the-zero) for
+details.

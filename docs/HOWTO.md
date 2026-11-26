@@ -116,6 +116,18 @@ python tools/zero_ssh.py "chmod 755 /home/pi/meshcard/meshcard.new && mv -f /hom
 Launcher entry, start script and alert service: `zero/meshcard/`.
 The phone app connects to the Zero over the network (Linux meshtasticd has no Bluetooth).
 
+### Maps on the Zero
+
+Open **Map** and press **M** to cycle Radar, Street and Topo. Use **+/-** to
+zoom and **0** to fit the nodes. On Street or Topo, press **Enter** to pan
+with the arrow keys and **Enter** again to finish. **H** enables compass
+heading on Radar when the sensor is available. **U** changes map units.
+
+Street and Topo need internet access the first time you view an area. The
+Zero uses `curl` to fetch visible tiles and keeps them in
+`~/.local/state/meshzero/maps/` by default. Press **D** on the Map tab to
+toggle downloads and use the saved tiles offline.
+
 ### Shared UI development
 
 After the pinned commit is available on the fork, run `git submodule update --init` from MeshCard to populate `meshcard/`. Edit the shared screens there and use the existing ADV, Zero, and preview build scripts from the MeshCard workspace.
@@ -130,8 +142,15 @@ Before a Zero deployment, copy the working `meshcard` and `meshcard-alertd` bina
 
 ## 5. PC preview (screenshots without a device)
 
-```
-wsl -d Debian -u root -- bash "/mnt/c/00 - GitHub/MeshCard/tools/preview_build.sh" <shots list> adv
+From the MeshCard checkout in WSL Debian as root, run:
+
+```bash
+bash tools/screenshots.sh zero docs/screenshots/zero
+bash tools/screenshots.sh adv
 ```
 
-Takes screenshots of MeshCard at the ADV size (`adv`) or the Zero size (`zero`) into `out/shots-<size>/`.
+The script renders the shared UI against the simulated mesh. The ADV preview
+uses its 240 × 135 layout and radar. The Zero preview uses its 320 × 170
+layout and captures Street and Topo as well. By default, images go to
+`out/screenshots-zero/` or `out/screenshots-adv/`. Set `BUILD` and `PYTHON`
+to reuse compiled simulator binaries and a Python environment with Meshtastic installed.
